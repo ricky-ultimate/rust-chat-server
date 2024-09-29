@@ -1,9 +1,9 @@
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::tcp::OwnedWriteHalf;
-use tokio::sync::broadcast;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::tcp::OwnedWriteHalf;
+use tokio::sync::broadcast;
 
 pub struct Client {
     pub username: String,
@@ -13,7 +13,11 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(addr: SocketAddr, writer: OwnedWriteHalf, receiver: broadcast::Receiver<String>) -> Self {
+    pub fn new(
+        addr: SocketAddr,
+        writer: OwnedWriteHalf,
+        receiver: broadcast::Receiver<String>,
+    ) -> Self {
         Client {
             username: addr.to_string(),
             addr,
@@ -42,7 +46,10 @@ pub async fn handle_client(
     // Read initial username from the client
     if let Ok(_) = reader.read_line(&mut line).await {
         client.username = line.trim().to_string();
-        clients.lock().unwrap().insert(client.username.clone(), tx.clone());
+        clients
+            .lock()
+            .unwrap()
+            .insert(client.username.clone(), tx.clone());
         let welcome_msg = format!("{} joined the chat!", client.username);
         tx.send(welcome_msg).unwrap();
     }
@@ -80,6 +87,19 @@ pub async fn handle_client(
     let goodbye_msg = format!("{} left the chat!", client.username);
     tx.send(goodbye_msg).unwrap();
     clients.lock().unwrap().remove(&client.username);
+
+    // After reading username, add:
+    println!("Enter the password:");
+    if let Ok(_) = reader.read_line(&mut line).await {
+        if line.trim() != "password123" {
+            // Simple hard-coded password
+            let _ = client
+                .writer
+                .write_all("Invalid password. Disconnecting.\n".as_bytes())
+                .await;
+            return;
+        }
+    }
 }
 
 // Parses a private message command of the form "/msg recipient message".
