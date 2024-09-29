@@ -18,7 +18,7 @@ pub fn add_message(history: &SharedHistory, message: String, limit: usize) {
     if history.len() >= limit {
         history.pop_front();
     }
-    history.push_back(message);
+    history.push_back(message.clone());
     info!("Message added to history: {}", message);
 }
 

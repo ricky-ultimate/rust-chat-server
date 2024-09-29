@@ -4,8 +4,8 @@ use tokio::sync::broadcast;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use crate::utils::SharedHistory;
-use log::{info, error};
+use log::info;
+use crate::utils::{add_message, SharedHistory};
 
 pub struct Client {
     pub username: String,
@@ -30,6 +30,10 @@ impl Client {
                 break;
             }
         }
+    }
+
+    pub async fn send_message(&mut self, msg: &str) -> Result<(), tokio::io::Error> {
+        self.writer.write_all(msg.as_bytes()).await
     }
 }
 

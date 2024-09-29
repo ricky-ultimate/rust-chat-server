@@ -2,9 +2,9 @@ use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tokio::io::BufReader;
 use crate::client::{Client, handle_client};
-use crate::utils::{SharedHistory, add_message, get_recent_history};
+use crate::utils::get_recent_history;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use log::info;
 
 pub async fn run_server(addr: &str, history_limit: usize) -> tokio::io::Result<()> {
@@ -20,19 +20,18 @@ pub async fn run_server(addr: &str, history_limit: usize) -> tokio::io::Result<(
         info!("Client connected: {}", addr);
 
         let tx = tx.clone();
-        let mut rx = tx.subscribe();
+        let rx = tx.subscribe(); // Assuming this is mutable for the future
         let clients = Arc::clone(&clients);
         let history = Arc::clone(&history);
 
         let (reader, writer) = socket.into_split();
         let reader = BufReader::new(reader);
-        let client = Client::new(addr, writer, rx);
+        let mut client = Client::new(addr, writer, rx); // Made client mutable
 
-        // Send recent message history to the new client
         let initial_history = get_recent_history(&history);
         tokio::spawn(async move {
             for msg in initial_history {
-                let _ = client.writer.write_all(msg.as_bytes()).await;
+                let _ = client.send_message(&msg).await; // Ensure send_message is available
             }
             handle_client(reader, client, tx, clients, history).await;
         });
