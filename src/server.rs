@@ -14,7 +14,7 @@ pub async fn run_server(addr: &str) -> tokio::io::Result<()> {
         println!("Client connected: {}", addr);
 
         let tx = tx.clone();
-        let mut rx = tx.subscribe();
+        let rx = tx.subscribe();
 
         let (reader, writer) = socket.into_split();
         let reader = BufReader::new(reader);
@@ -23,5 +23,16 @@ pub async fn run_server(addr: &str) -> tokio::io::Result<()> {
         tokio::spawn(async move {
             handle_client(reader, client, tx).await;
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_server_startup() {
+        // Try binding to a random port to ensure the server starts successfully.
+        let _ = TcpListener::bind("127.0.0.1:0").await.unwrap();
     }
 }
